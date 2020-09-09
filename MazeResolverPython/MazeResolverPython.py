@@ -8,14 +8,88 @@ class cell:
     whall = False
     groupCellsIndex = 2
     distAtStart = -1
-    
 
-def mazeIsComplex(maze):
-    for row in maze:
-        for col in row:
-            if not col.whall and col.groupCellsIndex !=  maze[1][1].groupCellsIndex:
-                return False
-    return True
+class Maze:
+    map = []
+    def mazeIsComplex():
+        for row in map:
+            for col in row:
+                if not col.whall and col.groupCellsIndex !=  map[1][1].groupCellsIndex:
+                    return False
+        return True
+
+    def findDestructibleWhall():
+        while True:
+            rnd = random.Random()
+            x = rnd.randint(1, len(map) - 2)
+            y = 0
+            if x % 2 == 0:
+                y = rnd.randint(0, ((len(map) - 1) / 2) -1) * 2 +1
+            else:
+                y = rnd.randint(0, ((len(map) - 1) / 2) -2) * 2 +2
+            if map[x][y].whall ==  True:
+                break
+        return [x, y];
+
+    def generateMaze(size):
+        map = [[cell() for col in range(cols)] for row in range(rows)]
+        if size % 2 == 0:
+            size  += 1
+        i = 0
+        for row in range(size):
+            for col in range(size):
+                is_whall = (row % 2 == 0) or (col % 2 == 0) or row == 0 or row == size-1 or col == 0 or col == size-1
+                map[row][col].whall = is_whall
+                if not is_whall:
+                    map[row][col].groupCellsIndex = i
+                    i += 1
+        map = makeComplexMaze(map ,size)
+    
+    def makeComplexMaze(size):
+        while not mazeIsComplex(map):
+            rnd = random.Random()
+            cell_1 = []
+            cell_2 = []
+            whall = findDestructibleWhall(map)
+            if whall[0] % 2 == 0:
+                cell_1 = [whall[0] - 1 , whall[1]]
+                cell_2 = [whall[0] + 1 , whall[1]]
+            else:
+                cell_1 = [whall[0], whall[1] - 1]
+                cell_2 = [whall[0], whall[1] + 1]
+            print(f"{cell_1[0]},{cell_1[1]}  {map[cell_1[0]][cell_1[1]].groupCellsIndex}  {whall[0]} {whall[1]}")
+            if map[cell_1[0]][cell_1[1]].groupCellsIndex != map[cell_2[0]][cell_2[1]].groupCellsIndex:
+                map[whall[0]][whall[1]].whall = False
+                map[whall[0]][whall[1]].groupCellsIndex = map[cell_1[0]][cell_1[1]].groupCellsIndex
+                valueDel = map[cell_2[0]][cell_2[1]].groupCellsIndex
+                for row in range(size):
+                    for col in range(size):
+                        if map[row][col].groupCellsIndex == valueDel:
+                            map[row][col].groupCellsIndex = map[cell_1[0]][cell_1[1]].groupCellsIndex 
+        for x in range(100):
+            whall = findDestructibleWhall(map)
+            map[whall[0]][whall[1]].whall = False
+        map[1][0].whall = False
+        map[size-2][size-1].whall = False
+        map[size-2][size-1].distAtStart = 0
+
+    def findWay():
+        futurMap = map
+        for row in range(len(map)):
+            for col in range(len(map)):
+                if not map[row][col].whall and map[row][col].distAtStart == -1:
+                    posToCheck = [[0,1],[0,-1],[1,0],[-1,0]]
+                    if row == 1 and col == 0:
+                        posToCheck = [[0,1]]
+                    for pos in posToCheck:
+                        if map[row + pos[0]][ col + pos[1]].distAtStart != -1:
+                            futurMap[row][col].distAtStart = map[row + pos[0]][ col + pos[1]].distAtStart + 1
+                            break
+        map = futurMap
+
+
+
+
 def hsv_to_rgb2(h, s, v):
         if s == 0.0: v*=255; return (v, v, v)
         i = int(h*6.) # XXX assume int() truncates!
@@ -30,64 +104,9 @@ def hsv_to_rgb2(h, s, v):
 def hsvToHex(h,s,v):
     return "#%02x%02x%02x" %  hsv_to_rgb2(h,s,v)
 
-def findDestructibleWhall(maze):
-    while True:
-        rnd = random.Random()
-        x = rnd.randint(1, len(maze) - 2)
-        y = 0
-        if x % 2 == 0:
-            y = rnd.randint(0, ((len(maze) - 1) / 2) -1) * 2 +1
-        else:
-            y = rnd.randint(0, ((len(maze) - 1) / 2) -2) * 2 +2
-        if maze[x][y].whall ==  True:
-            break
-    return [x, y];
 
 
-def generateMaze(size):
-    maze = [[cell() for col in range(cols)] for row in range(rows)]
-    if size % 2 == 0:
-        size  += 1
-    i = 0
-    for row in range(size):
-        for col in range(size):
-            is_whall = (row % 2 == 0) or (col % 2 == 0) or row == 0 or row == size-1 or col == 0 or col == size-1
-            maze[row][col].whall = is_whall
-            if not is_whall:
-                maze[row][col].groupCellsIndex = i
-                i += 1
-    maze = makeComplexMaze(maze ,size)
-    return maze
 
-def makeComplexMaze(_maze ,size):
-    maze = _maze
-    while not mazeIsComplex(maze):
-            rnd = random.Random()
-            cell_1 = []
-            cell_2 = []
-            whall = findDestructibleWhall(maze)
-            if whall[0] % 2 == 0:
-                cell_1 = [whall[0] - 1 , whall[1]]
-                cell_2 = [whall[0] + 1 , whall[1]]
-            else:
-                cell_1 = [whall[0], whall[1] - 1]
-                cell_2 = [whall[0], whall[1] + 1]
-            print(f"{cell_1[0]},{cell_1[1]}  {maze[cell_1[0]][cell_1[1]].groupCellsIndex}  {whall[0]} {whall[1]}")
-            if maze[cell_1[0]][cell_1[1]].groupCellsIndex != maze[cell_2[0]][cell_2[1]].groupCellsIndex:
-                maze[whall[0]][whall[1]].whall = False
-                maze[whall[0]][whall[1]].groupCellsIndex = maze[cell_1[0]][cell_1[1]].groupCellsIndex
-                valueDel = maze[cell_2[0]][cell_2[1]].groupCellsIndex
-                for row in range(size):
-                    for col in range(size):
-                        if maze[row][col].groupCellsIndex == valueDel:
-                            maze[row][col].groupCellsIndex = maze[cell_1[0]][cell_1[1]].groupCellsIndex 
-    for x in range(100):
-        whall = findDestructibleWhall(maze)
-        maze[whall[0]][whall[1]].whall = False
-    maze[1][0].whall = False
-    maze[size-2][size-1].whall = False
-    maze[size-2][size-1].distAtStart = 0
-    return maze
         
 
 
@@ -106,28 +125,16 @@ def updateCellsMap(maze, cellsMap, size):
     root.update()
     
 
-def findWay(maze):
-    futurMaze = maze
-    for row in range(len(maze)):
-        for col in range(len(maze)):
-            if not maze[row][col].whall and maze[row][col].distAtStart == -1:
-                posToCheck = [[0,1],[0,-1],[1,0],[-1,0]]
-                if row == 1 and col == 0:
-                    posToCheck = [[0,1]]
-                for pos in posToCheck:
-                    if maze[row + pos[0]][ col + pos[1]].distAtStart != -1:
-                        futurMaze[row][col].distAtStart = maze[row + pos[0]][ col + pos[1]].distAtStart + 1
-                        break
-    return futurMaze
 
 
 def launch():
     cellsMap = makeCellsMap(rows, cols, cell_size)
-    maze = generateMaze(rows)
-    updateCellsMap(maze ,cellsMap, rows)
-    while maze[1][0].distAtStart == -1:
-        maze = findWay(maze)
-        updateCellsMap(maze ,cellsMap, rows)
+    maze = Maze()
+    maze.generateMaze(rows)
+    updateCellsMap(maze.map ,cellsMap, rows)
+    while maze.map[1][0].distAtStart == -1:
+        maze.findWay()
+        updateCellsMap(maze.maze ,cellsMap, rows)
 
 
 print(hsvToHex(0.91,1,1))
