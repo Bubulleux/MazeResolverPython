@@ -1,4 +1,4 @@
-from tkinter import *
+from tkinter import Canvas, Tk, Button, Label
 import random
 import sys
 import colorsys
@@ -36,16 +36,14 @@ class Maze:
     isGenerate = False
     everyWayIsFound = False
     notWayCell = 0
+    way = []
 
     def mazeIsComplex(self):
         return len(self.groupCellByIndex) == 1
 
-    
-    
     def makeComplexMaze(self):
         timeToCalc = []
-        while not self.mazeIsComplex():
-            
+        while not self.mazeIsComplex():    
             cell_1 = []
             cell_2 = []
             index = random.randint(0, len(self.breakabel_whall) - 1)
@@ -66,8 +64,8 @@ class Maze:
                     self.map[pos[0]][pos[1]].groupCellsIndex = self.map[cell_1[0]][cell_1[1]].groupCellsIndex
                     self.groupCellByIndex[self.map[cell_1[0]][cell_1[1]].groupCellsIndex].append((pos))
                 del self.groupCellByIndex[valueDel]
-                print(len(self.groupCellByIndex))
                 timeToCalc.append(time.time() - startTime)
+                print(len(self.groupCellByIndex))
                         
         moyTime = 0
         for xtime in timeToCalc:
@@ -120,11 +118,11 @@ class Maze:
             for col in range(size):
                 if not self.map[row][col].whall:
                     self.notWayCell += 1
-        self.isGenerate = True;
+        self.isGenerate = True
 
     def findAllWay(self):
         #self.cellsNeedUpdate.clear()
-        while self.notWayCell > 0:
+        while len(self.toUpdate) > 0:
             futurMap = self.map
             futurToUpdate = []
             for updateCell in self.toUpdate:
@@ -135,36 +133,47 @@ class Maze:
                     posToCheck = [[0,1]]
                 for pos in posToCheck:
                     if self.map[row + pos[0]][ col + pos[1]].distAtStart != -1:
+                        if futurMap[row][col].distAtStart == -1:
+                            self.notWayCell -= 1
+                            self.cellsNeedUpdate.append([row, col])
                         futurMap[row][col].distAtStart = self.map[row + pos[0]][ col + pos[1]].distAtStart + 1
-                        self.notWayCell -= 1
-                        self.cellsNeedUpdate.append([row, col])
-                        print(self.notWayCell)
                     elif self.map[row + pos[0]][ col + pos[1]].whall == False:
                         futurToUpdate.append([row + pos[0], col + pos[1]])
             self.toUpdate = futurToUpdate
             self.map = futurMap
+            #updateCellsMap(self)
+            #self.cellsNeedUpdate.clear()
+
         self.everyWayIsFound = True
 
     def findMasterWay(self, pos):
-        self.map[1][0].isWay = True
-        self.map[1][1].isWay = True
-        self.cellsNeedUpdate.append([1, 0])
-        self.cellsNeedUpdate.append([1, 1])
-        lastWayfound = [1, 1]
-        posToCheck = [[0,1],[0,-1],[1,0],[-1,0]] 
+        for xcell in self.way:
+            self.map[xcell[0]][xcell[1]].isWay = False
+            self.cellsNeedUpdate.append(xcell)
+        self.way.clear()
+        self.map[pos[0]][pos[1]].isWay = True
+        self.cellsNeedUpdate.append(pos)
+        self.way.append(pos)
+        lastWayfound = pos
         while not self.map[self.row-2][self.col-1].isWay:
-            cellCloserStart = 0
+            cellCloserStart = lastWayfound
+            posToCheck = [[0,1],[0,-1],[1,0],[-1,0]] 
             for pos in posToCheck:
                 pos = [lastWayfound[0] + pos[0], lastWayfound[1] + pos[1]]
-                
+                if pos[0] < 0 or pos[1] < 0:
+                    continue
                 if self.map[pos[0]][pos[1]].whall == False:
                     if cellCloserStart == 0:
                         cellCloserStart = pos
                     elif self.map[cellCloserStart[0]][cellCloserStart[1]].distAtStart > self.map[pos[0]][pos[1]].distAtStart:
                         cellCloserStart = pos
             self.map[cellCloserStart[0]][cellCloserStart[1]].isWay = True
+            self.way.append(cellCloserStart)
             self.cellsNeedUpdate.append(cellCloserStart)
+            updateCellsMap(self)
+            self.cellsNeedUpdate.clear()
             lastWayfound = cellCloserStart
+        print(f"way Size {len(self.way)}")
 
 
 def makeCellsMap(maze):
@@ -175,16 +184,33 @@ def makeCellsMap(maze):
             if maze.map[row][col].whall == True:
                 continue
             cellsMap[row][col] = canvas.create_rectangle(col * cell_size, row * cell_size, (col + 1) * cell_size, (row + 1) * cell_size, outline="")
-    return cellsMap
+
 def updateCellsMap(maze):
     global cellsMap
     for xcell in maze.cellsNeedUpdate:
         color = "white" if maze.map[xcell[0]][xcell[1]].isWay else ("black" if maze.map[xcell[0]][xcell[1]].distAtStart == -1 else hsvToHex(maze.map[xcell[0]][xcell[1]].distAtStart * 0.001,1,1))
         canvas.itemconfig(cellsMap[xcell[0]][xcell[1]], fill = color)
     updateData(maze)
-    root.update()
+
 def updateData(maze):
-    labelResult.config(text="chaise")
+    info = ""
+    if not maze.isGenerate and not maze.everyWayIsFound:
+        info = f""
+    labelResult.config(text=info)
+    root.update()
+
+def findWayInMoussePos(event):
+    global maze
+    print(maze.everyWayIsFound)
+    if maze.everyWayIsFound:
+        row = int(event.y / cell_size)
+        col = int(event.x / cell_size)
+        print("findWayInMoussePos2")
+        if not maze.map[row][col].whall:
+            maze.findMasterWay([row, col])
+            updateCellsMap(maze)
+            maze.cellsNeedUpdate.clear()
+            print("findWayInMoussePos3")
     
 
 
@@ -196,25 +222,29 @@ def launch():
     maze.row = rows
     maze.col = cols
     maze.generateMaze()
-    cellsMap = makeCellsMap(maze)
+    makeCellsMap(maze)
     updateCellsMap(maze)
+    maze.cellsNeedUpdate.clear()
     print(f" maze generate in {time.time() - startTime} sec")
     maze.findAllWay()
     maze.findMasterWay([1, 0])
     updateCellsMap(maze)
+    maze.cellsNeedUpdate.clear()
 
 
 root = Tk()
 root.title("Maze Resolver")
 root.resizable(width = False, height = False)
 cellsMap = []
-cell_size = 10;
-rows = 51
-cols = 51
+maze = Maze()
+cell_size = 5
+rows = 101
+cols = 101
 canvas_width = cols * cell_size
 canvas_height = rows * cell_size
 canvas = Canvas(root, width = canvas_width, height = canvas_height, bg="gray")
 canvas.grid(column=0, row=0, columnspan = 3)
+canvas.bind('<Button-1>',findWayInMoussePos)
 
 btnLaunch = Button(root, text = "Launch", command = launch)
 btnLaunch.grid(column=1,row=1)
