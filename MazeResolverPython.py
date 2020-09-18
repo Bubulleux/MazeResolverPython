@@ -36,6 +36,7 @@ class Maze:
     isGenerate = False
     everyWayIsFound = False
     notWayCell = 0
+    cells = 0
     way = []
 
     def mazeIsComplex(self):
@@ -65,7 +66,7 @@ class Maze:
                     self.groupCellByIndex[self.map[cell_1[0]][cell_1[1]].groupCellsIndex].append((pos))
                 del self.groupCellByIndex[valueDel]
                 timeToCalc.append(time.time() - startTime)
-                print(len(self.groupCellByIndex))
+                #print(len(self.groupCellByIndex))
                         
         moyTime = 0
         for xtime in timeToCalc:
@@ -143,8 +144,8 @@ class Maze:
             self.map = futurMap
             #updateCellsMap(self)
             #self.cellsNeedUpdate.clear()
-
         self.everyWayIsFound = True
+        print(f"chaise chaise {self.everyWayIsFound}")
 
     def findMasterWay(self, pos):
         for xcell in self.way:
@@ -195,27 +196,28 @@ def updateCellsMap(maze):
 def updateData(maze):
     info = ""
     if not maze.isGenerate and not maze.everyWayIsFound:
-        info = f""
+        info = f"group cells: {len(maze.groupCellByIndex)}"
+    elif maze.generateMaze and not maze.everyWayIsFound:
+        info = f"no way cells: {len(maze.notWayCell)}"
+
     labelResult.config(text=info)
     root.update()
 
 def findWayInMoussePos(event):
     global maze
-    print(maze.everyWayIsFound)
     if maze.everyWayIsFound:
         row = int(event.y / cell_size)
         col = int(event.x / cell_size)
-        print("findWayInMoussePos2")
         if not maze.map[row][col].whall:
             maze.findMasterWay([row, col])
             updateCellsMap(maze)
             maze.cellsNeedUpdate.clear()
-            print("findWayInMoussePos3")
     
 
 
 
 def launch():
+    global maze
     startTime = time.time()
     canvas.delete("all")
     maze = Maze()
